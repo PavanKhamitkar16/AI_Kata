@@ -14,12 +14,13 @@ import { useAuth } from '../hooks/useAuth';
  * with `to="#"` until their pages are implemented.
  */
 const NAV_ITEMS = [
-  { label: 'Dashboard',       to: '/dashboard',  roles: ['ADMIN', 'DOCTOR', 'STAFF'] },
-  { label: 'Patients',        to: '#',           roles: ['ADMIN', 'DOCTOR', 'STAFF'] },
-  { label: 'Appointments',    to: '#',           roles: ['ADMIN', 'DOCTOR', 'STAFF'] },
-  { label: 'Medical Records', to: '#',           roles: ['ADMIN', 'DOCTOR'] },
-  { label: 'Users',           to: '#',           roles: ['ADMIN'] },
-  { label: 'Reports',         to: '#',           roles: ['ADMIN'] },
+  { label: 'Dashboard',       to: '/dashboard', roles: ['ADMIN', 'DOCTOR', 'STAFF'] },
+  { label: 'Doctors',         to: '/doctors',   roles: ['ADMIN', 'DOCTOR', 'STAFF'] },
+  { label: 'Patients',        to: '/patients',  roles: ['ADMIN', 'DOCTOR', 'STAFF'] },
+  { label: 'Appointments',    to: '#',          roles: ['ADMIN', 'DOCTOR', 'STAFF'] },
+  { label: 'Medical Records', to: '#',          roles: ['ADMIN', 'DOCTOR'] },
+  { label: 'Users',           to: '#',          roles: ['ADMIN'] },
+  { label: 'Reports',         to: '#',          roles: ['ADMIN'] },
 ];
 
 function Sidebar() {
