@@ -17,7 +17,7 @@ const NAV_ITEMS = [
   { label: 'Dashboard',       to: '/dashboard', roles: ['ADMIN', 'DOCTOR', 'STAFF'] },
   { label: 'Doctors',         to: '/doctors',   roles: ['ADMIN', 'DOCTOR', 'STAFF'] },
   { label: 'Patients',        to: '/patients',  roles: ['ADMIN', 'DOCTOR', 'STAFF'] },
-  { label: 'Appointments',    to: '#',          roles: ['ADMIN', 'DOCTOR', 'STAFF'] },
+  { label: 'Appointments',    to: '/appointments', roles: ['ADMIN', 'DOCTOR', 'STAFF'] },
   { label: 'Medical Records', to: '#',          roles: ['ADMIN', 'DOCTOR'] },
   { label: 'Users',           to: '#',          roles: ['ADMIN'] },
   { label: 'Reports',         to: '#',          roles: ['ADMIN'] },
