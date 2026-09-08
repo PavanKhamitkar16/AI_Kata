@@ -55,6 +55,9 @@ export function AuthProvider({ children }) {
         username: data.username,
         email:    data.email,
         role:     data.role,
+        // doctorId is populated by the backend for DOCTOR role users whose Doctor
+        // profile email matches their login email. null for ADMIN / STAFF.
+        doctorId: data.doctorId || null,
       });
       return data;
     } catch (err) {

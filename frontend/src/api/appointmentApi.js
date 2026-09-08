@@ -31,6 +31,16 @@ export async function createAppointment(data) {
   return res.data.data;
 }
 
+/**
+ * GET /api/appointments
+ * Returns all appointments in the system, newest first.
+ * Only accessible to ADMIN and STAFF roles.
+ */
+export async function getAllAppointments() {
+  const res = await apiClient.get('/api/appointments');
+  return res.data.data;
+}
+
 /** GET /api/appointments/:id */
 export async function getAppointment(id) {
   const res = await apiClient.get(`/api/appointments/${id}`);

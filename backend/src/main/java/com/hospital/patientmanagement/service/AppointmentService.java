@@ -22,6 +22,9 @@ public interface AppointmentService {
 
     AppointmentResponse getAppointment(UUID appointmentId);
 
+    /** Returns every appointment in the system, newest first. Intended for ADMIN / STAFF views. */
+    List<AppointmentResponse> getAllAppointments();
+
     List<AppointmentResponse> getPatientAppointments(UUID patientId);
 
     List<AppointmentResponse> getDoctorAppointments(UUID doctorId);

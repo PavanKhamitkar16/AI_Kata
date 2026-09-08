@@ -6,7 +6,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorComponent from '../../components/ErrorComponent';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../hooks/useAuth';
-import { cancelAppointment, getPatientAppointments, getDoctorAppointments } from '../../api/appointmentApi';
+import { cancelAppointment, getAllAppointments, getPatientAppointments, getDoctorAppointments } from '../../api/appointmentApi';
 
 const STATUS_STYLES = {
   REQUESTED: { bg: '#fefcbf', color: '#744210' },
@@ -33,10 +33,19 @@ function MyAppointments() {
     setError(null);
     try {
       let data = [];
-      if (user?.role === 'DOCTOR' && user?.doctorId) {
-        data = await getDoctorAppointments(user.doctorId);
-      } else if (user?.patientId) {
-        data = await getPatientAppointments(user.patientId);
+      if (user?.role === 'DOCTOR') {
+        // DOCTOR: show only their own appointments, identified by the doctorId
+        // returned at login (matched by email against the Doctor profile).
+        if (user.doctorId) {
+          data = await getDoctorAppointments(user.doctorId);
+        } else {
+          // doctorId missing means no Doctor profile is linked to this user account yet.
+          setError('Your account is not linked to a Doctor profile. Ask an admin to register your doctor profile with the same email as your user account.');
+          return;
+        }
+      } else {
+        // ADMIN / STAFF: show all appointments so they can manage the full schedule.
+        data = await getAllAppointments();
       }
       setAppointments(data);
     } catch (err) {

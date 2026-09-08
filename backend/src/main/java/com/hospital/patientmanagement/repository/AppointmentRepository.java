@@ -16,6 +16,10 @@ import java.util.UUID;
  */
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID> {
 
+    /** All appointments in the system, newest first. Used by ADMIN / STAFF views. */
+    @Query("SELECT a FROM Appointment a ORDER BY a.appointmentDate DESC, a.startTime DESC")
+    List<Appointment> findAllOrderByDateDesc();
+
     /** All appointments for a patient, newest first. */
     @Query("SELECT a FROM Appointment a WHERE a.patient.patientId = :patientId ORDER BY a.appointmentDate DESC, a.startTime DESC")
     List<Appointment> findByPatientId(@Param("patientId") UUID patientId);

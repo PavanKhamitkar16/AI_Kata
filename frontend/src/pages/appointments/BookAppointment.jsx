@@ -7,6 +7,7 @@ import ErrorComponent from '../../components/ErrorComponent';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../hooks/useAuth';
 import { getDoctorById } from '../../api/doctorApi';
+import { getPatients } from '../../api/patientApi';
 import { getAvailableSlots, createAppointment } from '../../api/appointmentApi';
 
 function BookAppointment() {
@@ -30,6 +31,13 @@ function BookAppointment() {
   const [reason,     setReason]     = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Patient selection — ADMIN / STAFF pick a registered patient;
+  // DOCTOR role currently cannot book directly (they manage their schedule only).
+  const [patients,          setPatients]          = useState([]);
+  const [patientsLoad,      setPatientsLoad]      = useState(false);
+  const [patientSearch,     setPatientSearch]     = useState('');
+  const [selectedPatientId, setSelectedPatientId] = useState('');
+
   // Load doctor info
   useEffect(() => {
     if (!doctorId) return;
@@ -38,6 +46,16 @@ function BookAppointment() {
       .catch(err => setDocError(err.response?.data?.message || 'Failed to load doctor.'))
       .finally(() => setDocLoad(false));
   }, [doctorId]);
+
+  // Load patients for the selector (ADMIN / STAFF only)
+  useEffect(() => {
+    if (user?.role === 'DOCTOR') return; // doctors don't book via this form
+    setPatientsLoad(true);
+    getPatients({ size: 200, sort: 'lastName', activeOnly: true })
+      .then(page => setPatients(page.content || []))
+      .catch(() => setPatients([]))
+      .finally(() => setPatientsLoad(false));
+  }, [user?.role]);
 
   // Load slots whenever date changes
   useEffect(() => {
@@ -53,16 +71,14 @@ function BookAppointment() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!selectedSlot) { showToast('Please select a time slot.', 'error'); return; }
-    if (!reason.trim()) { showToast('Please enter a reason.', 'error'); return; }
+    if (!selectedPatientId) { showToast('Please select a patient.', 'error'); return; }
+    if (!selectedSlot)       { showToast('Please select a time slot.', 'error'); return; }
+    if (!reason.trim())      { showToast('Please enter a reason.', 'error'); return; }
 
     setSubmitting(true);
     try {
-      // patientId: in a real system this comes from the logged-in patient's profile.
-      // For now we use the user's id field (staff/admin can book on behalf of a patient
-      // via the patientId they'd pass; here we fall back to user.id).
       const appointment = await createAppointment({
-        patientId: user?.patientId || user?.id,
+        patientId: selectedPatientId,
         doctorId,
         date,
         startTime: selectedSlot,
@@ -82,8 +98,35 @@ function BookAppointment() {
     return t.substring(0, 5);
   }
 
-  // Minimum date for the date picker
+  // Filtered patient list based on search input
+  const filteredPatients = patients.filter(p => {
+    const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
+    return fullName.includes(patientSearch.toLowerCase());
+  });
+
+  const selectedPatient = patients.find(p => p.patientId === selectedPatientId);
+
   const todayStr = new Date().toISOString().split('T')[0];
+
+  // DOCTOR role guard — doctors don't book appointments through this form
+  if (user?.role === 'DOCTOR') {
+    return (
+      <div style={styles.layout}>
+        <Sidebar />
+        <div style={styles.main}>
+          <Header />
+          <main style={styles.content}>
+            <div style={styles.card}>
+              <h2 style={styles.pageTitle}>Book an Appointment</h2>
+              <p style={{ color: '#718096' }}>
+                Appointment booking is performed by Admin or Staff on behalf of patients.
+              </p>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.layout}>
@@ -121,6 +164,72 @@ function BookAppointment() {
             )}
 
             <form onSubmit={handleSubmit} style={styles.form}>
+              {/* Patient selector */}
+              <div style={styles.field}>
+                <label style={styles.label}>
+                  Patient <span style={{ color: '#e53e3e' }}>*</span>
+                </label>
+                {patientsLoad ? (
+                  <LoadingSpinner size="sm" />
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Search patient by name..."
+                      value={patientSearch}
+                      onChange={e => setPatientSearch(e.target.value)}
+                      style={styles.input}
+                    />
+                    {patientSearch && filteredPatients.length > 0 && !selectedPatient && (
+                      <div style={styles.dropdown}>
+                        {filteredPatients.slice(0, 8).map(p => (
+                          <button
+                            key={p.patientId}
+                            type="button"
+                            style={styles.dropdownItem}
+                            onClick={() => {
+                              setSelectedPatientId(p.patientId);
+                              setPatientSearch(`${p.firstName} ${p.lastName}`);
+                            }}
+                          >
+                            {p.firstName} {p.lastName}
+                            {p.dateOfBirth && (
+                              <span style={styles.dropdownSub}>
+                                {' '}· DOB: {new Date(p.dateOfBirth + 'T00:00:00').toLocaleDateString('en-GB')}
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {selectedPatient && (
+                      <div style={styles.selectedPatient}>
+                        <span>
+                          {selectedPatient.firstName} {selectedPatient.lastName}
+                          {selectedPatient.dateOfBirth && (
+                            <span style={{ color: '#718096', fontSize: '12px', marginLeft: '8px' }}>
+                              DOB: {new Date(selectedPatient.dateOfBirth + 'T00:00:00').toLocaleDateString('en-GB')}
+                            </span>
+                          )}
+                        </span>
+                        <button
+                          type="button"
+                          style={styles.clearPatientBtn}
+                          onClick={() => { setSelectedPatientId(''); setPatientSearch(''); }}
+                        >
+                          Change
+                        </button>
+                      </div>
+                    )}
+                    {patients.length === 0 && !patientsLoad && (
+                      <p style={styles.noSlots}>
+                        No active patients found. <a href="/patients/new" style={{ color: '#3182ce' }}>Register a patient</a> first.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+
               {/* Date picker */}
               <div style={styles.field}>
                 <label style={styles.label}>Appointment Date</label>
@@ -167,7 +276,7 @@ function BookAppointment() {
                   value={reason}
                   onChange={e => setReason(e.target.value)}
                   rows={3}
-                  placeholder="Describe your symptoms or reason for the appointment..."
+                  placeholder="Describe symptoms or reason for the appointment..."
                   style={styles.textarea}
                   required
                   maxLength={500}
@@ -176,9 +285,10 @@ function BookAppointment() {
               </div>
 
               {/* Summary */}
-              {selectedSlot && date && (
+              {selectedSlot && date && selectedPatient && (
                 <div style={styles.summary}>
-                  <strong>Booking summary:</strong> {doctor?.name} on {date} at {formatTime(selectedSlot)}
+                  <strong>Booking summary:</strong> {doctor?.name} for{' '}
+                  {selectedPatient.firstName} {selectedPatient.lastName} on {date} at {formatTime(selectedSlot)}
                 </div>
               )}
 
@@ -188,8 +298,8 @@ function BookAppointment() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || !selectedSlot}
-                  style={submitting || !selectedSlot ? styles.submitBtnDisabled : styles.submitBtn}
+                  disabled={submitting || !selectedSlot || !selectedPatientId}
+                  style={submitting || !selectedSlot || !selectedPatientId ? styles.submitBtnDisabled : styles.submitBtn}
                 >
                   {submitting ? 'Booking...' : 'Confirm Booking'}
                 </button>
@@ -221,11 +331,18 @@ const styles = {
   changeDoctorBtn: { marginLeft: 'auto', padding: '5px 12px', borderRadius: '4px', border: '1px solid #bee3f8', background: '#fff', color: '#2b6cb0', fontSize: '12px', cursor: 'pointer', fontWeight: 500 },
 
   form:     { display: 'flex', flexDirection: 'column', gap: '20px' },
-  field:    { display: 'flex', flexDirection: 'column', gap: '6px' },
+  field:    { display: 'flex', flexDirection: 'column', gap: '6px', position: 'relative' },
   label:    { fontSize: '13px', fontWeight: 600, color: '#4a5568' },
   input:    { padding: '9px 12px', border: '1px solid #cbd5e0', borderRadius: '4px', fontSize: '14px', color: '#2d3748' },
   textarea: { padding: '9px 12px', border: '1px solid #cbd5e0', borderRadius: '4px', fontSize: '14px', color: '#2d3748', resize: 'vertical' },
   charCount:{ margin: '2px 0 0', fontSize: '11px', color: '#a0aec0', textAlign: 'right' },
+
+  dropdown:     { position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #cbd5e0', borderRadius: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.12)', zIndex: 10, marginTop: '2px' },
+  dropdownItem: { display: 'block', width: '100%', padding: '9px 12px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#2d3748', borderBottom: '1px solid #f7fafc' },
+  dropdownSub:  { color: '#718096', fontSize: '12px' },
+
+  selectedPatient:  { display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f0fff4', border: '1px solid #9ae6b4', borderRadius: '4px', padding: '9px 12px', fontSize: '14px', color: '#276749' },
+  clearPatientBtn:  { background: 'none', border: 'none', color: '#3182ce', cursor: 'pointer', fontSize: '13px', fontWeight: 500 },
 
   noSlots:  { fontSize: '13px', color: '#718096' },
   slotGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },

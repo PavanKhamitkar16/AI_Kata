@@ -37,6 +37,17 @@ public class AppointmentController {
 
     private final AppointmentService appointmentService;
 
+    /**
+     * Returns all appointments in the system, newest first.
+     * Intended for ADMIN and STAFF users who manage the full schedule.
+     */
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<ApiResponse<List<AppointmentResponse>>> getAllAppointments() {
+        List<AppointmentResponse> list = appointmentService.getAllAppointments();
+        return ResponseEntity.ok(ApiResponse.success("All appointments retrieved", list));
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'STAFF')")
     public ResponseEntity<ApiResponse<AppointmentResponse>> createAppointment(

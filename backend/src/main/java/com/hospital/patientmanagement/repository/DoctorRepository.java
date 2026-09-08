@@ -20,6 +20,8 @@ public interface DoctorRepository extends JpaRepository<Doctor, UUID> {
 
     boolean existsByEmail(String email);
 
+    java.util.Optional<Doctor> findByEmail(String email);
+
     /**
      * Filtered, paginated doctor list.
      * Any parameter that is {@code null} is excluded from the WHERE clause.

@@ -116,6 +116,13 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<AppointmentResponse> getAllAppointments() {
+        return appointmentRepository.findAllOrderByDateDesc()
+                .stream().map(AppointmentResponse::from).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<AppointmentResponse> getPatientAppointments(UUID patientId) {
         findPatientOrThrow(patientId); // validate patient exists
         return appointmentRepository.findByPatientId(patientId)

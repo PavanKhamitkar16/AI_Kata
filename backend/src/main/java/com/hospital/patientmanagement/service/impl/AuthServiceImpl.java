@@ -2,6 +2,9 @@ package com.hospital.patientmanagement.service.impl;
 
 import com.hospital.patientmanagement.dto.LoginRequest;
 import com.hospital.patientmanagement.dto.LoginResponse;
+import com.hospital.patientmanagement.entity.Doctor;
+import com.hospital.patientmanagement.enums.Role;
+import com.hospital.patientmanagement.repository.DoctorRepository;
 import com.hospital.patientmanagement.security.CustomUserDetails;
 import com.hospital.patientmanagement.security.JwtTokenProvider;
 import com.hospital.patientmanagement.service.AuthService;
@@ -13,6 +16,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+
+import java.util.UUID;
 
 /**
  * Default {@link AuthService} implementation.
@@ -30,6 +35,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider      jwtTokenProvider;
+    private final DoctorRepository      doctorRepository;
 
     @Value("${app.jwt.expiration-ms}")
     private long jwtExpirationMs;
@@ -45,6 +51,19 @@ public class AuthServiceImpl implements AuthService {
         CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
         String token = jwtTokenProvider.generateToken(authentication);
 
+        // For DOCTOR users, look up the Doctor profile by matching email so the frontend
+        // can fetch that doctor's appointments without needing a separate profile endpoint.
+        UUID doctorId = null;
+        if (principal.getUser().getRole() == Role.DOCTOR) {
+            doctorId = doctorRepository.findByEmail(principal.getUser().getEmail())
+                    .map(Doctor::getDoctorId)
+                    .orElse(null);
+            if (doctorId == null) {
+                log.warn("DOCTOR user '{}' has no matching Doctor profile (email: {}).",
+                        principal.getUsername(), principal.getUser().getEmail());
+            }
+        }
+
         log.info("User '{}' logged in successfully.", principal.getUsername());
 
         return LoginResponse.builder()
@@ -54,6 +73,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(principal.getUser().getEmail())
                 .role(principal.getUser().getRole().name())
                 .expiresIn(jwtExpirationMs)
+                .doctorId(doctorId)
                 .build();
     }
 
