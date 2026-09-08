@@ -6,11 +6,13 @@ import com.hospital.patientmanagement.entity.Doctor;
 import com.hospital.patientmanagement.enums.AvailabilityStatus;
 import com.hospital.patientmanagement.exception.ResourceNotFoundException;
 import com.hospital.patientmanagement.repository.DoctorRepository;
+import com.hospital.patientmanagement.repository.DoctorSpecifications;
 import com.hospital.patientmanagement.service.DoctorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -121,9 +123,15 @@ public class DoctorServiceImpl implements DoctorService {
     public Page<DoctorResponse> getDoctors(String specialization, String department,
                                             AvailabilityStatus status, Boolean activeOnly,
                                             Pageable pageable) {
-        return doctorRepository
-                .search(specialization, department, status, activeOnly, pageable)
-                .map(DoctorResponse::from);
+        // Build the Specification dynamically — null-valued specs are ignored,
+        // so no WHERE clause is emitted for absent filters. This is the
+        // Hibernate 6 safe alternative to the JPQL IS NULL parameter pattern.
+        Specification<Doctor> spec = Specification
+                .where(DoctorSpecifications.hasSpecialization(specialization))
+                .and(DoctorSpecifications.hasDepartment(department))
+                .and(DoctorSpecifications.hasStatus(status))
+                .and(DoctorSpecifications.isActive(activeOnly));
+        return doctorRepository.findAll(spec, pageable).map(DoctorResponse::from);
     }
 
     // ------------------------------------------------------------------ //
